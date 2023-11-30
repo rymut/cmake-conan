@@ -19,7 +19,11 @@ This is branch of https://github.com/conan-io/cmake-conan/tree/develop2
 - [ ] Write unit tests for added changes
 - [ ] Test code with `pytest` to see if changes did not broke the code.
 
-### Known limitations
+## Ideas
+
+- [ ] `conan install` can be deduced from `conan install -h` command line
+
+## Known limitations
 
 For now the same limitations apply to this code as in orginal code.
 
@@ -30,3 +34,24 @@ There are some tests, you can run in python, with pytest, for example:
 ```bash
 $ pytest -rA
 ```
+
+
+### CMake
+
+#### GLOBAL properties: 
+
+* `CONAN_INSTALL_SUCCESS` - set to `TRUE` by `conan_install` if successful
+* `CONAN_GENERATORS_FOLDER` - generator folder path set by `conan_install` if successful
+* `CONAN_PROVIDE_DEPENDENCY_INVOKED` - set to true if `conan_provide_dependency` was called
+
+#### Cache variables:
+
+* `CONAN_COMMAND` - file path to conan command
+
+#### Macros
+
+* `conan_provide_dependency` - default handle for override find_package
+
+#### Functions
+
+* `conan_install` - invoke conan install command set `CONAN_INSTALL_SUCCESS` property, requires `CONAN_COMMAND` to be set
