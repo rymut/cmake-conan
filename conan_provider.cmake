@@ -1,5 +1,61 @@
+# Distributed under MIT License.
+
+#[=======================================================================[.rst:
+conan_provider
+---------------
+
+This script wraps conan 2.0 for ease of use with CMake projects.
+
+Use case
+^^^^^^^^
+
+Script Variables
+^^^^^^^^^^^^^^^^
+
+``CONAN_MINIMUM_VERSION``
+    A the minimum version of Conan required to for provider to work 
+    corretcly.
+#]=======================================================================]
+
 set(CONAN_MINIMUM_VERSION 2.0.5)
 
+#[=======================================================================[.rst:
+Result Cache Variables
+^^^^^^^^^^^^^^^^^^^^^^
+
+``CONAN_COMMAND``
+    Path to conan command to be used.
+
+Result Global properties
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``CONAN_INSTALL_SUCCESS``
+    Boolean information if `conan install` was successful
+    
+``CONAN_GENERATORS_FOLDER``
+    Path to generator folder if `conan install` was successful
+
+``CONAN_PROVIDE_DEPENDENCY_INVOKED``
+    Boolean information if `conan_provide_dependency` was already invoked
+
+Commands
+^^^^^^^^
+
+detect_os
+---------
+
+Add a target with no output so it will always be built.
+
+.. code-block:: cmake
+
+  detect_os(Name 
+                <OS_VAR>
+                <OS_API_LEVEL>
+                <OS_SDK>
+                <OS_SUBSYSTEM>
+                <OS_VERSION>)
+
+#]=======================================================================]
 
 function(detect_os OS OS_API_LEVEL OS_SDK OS_SUBSYSTEM OS_VERSION)
     # it could be cross compilation
@@ -397,9 +453,9 @@ function(conan_profile_detect_default)
 endfunction()
 
 function(conan_install_format_arguments ARGUMENTS)
+    
     set(_conan_values
-        -f
-        --format
+        -f --format
         -v
         --name
         --version
@@ -407,50 +463,28 @@ function(conan_install_format_arguments ARGUMENTS)
         --channel
         --requires
         --tool-requires
-        -b
-        --build
-        -r
-        --remote
-        -pr
-        --profile
-        -pr:b
-        --profile:build
-        -pr:h
-        --profile:host
-        -pr:a
-        --profile:all
-        -o
-        --options
-        -o:b
-        --options:build
-        -o:h
-        --options:host
-        -o:a
-        --options:all
-        -s
-        --settings
-        -s:b
-        --settings:build
-        -s:h
-        --settings:host
-        -s:a
-        --settings:all
-        -c
-        --conf
-        -c:b
-        --conf:build
-        -c:h
-        --conf:host
-        -c:a
-        --conf:all
-        --lockfile-out
-        --lockfile-overrides
-        -g
-        --generator
-        -of
-        --output-folder
-        -d
-        --deployer
+        -b --build
+        -r --remote
+        -pr --profile
+        -pr:b --profile:build
+        -pr:h --profile:host
+        -pr:a --profile:all
+        -o --options
+        -o:b --options:build
+        -o:h --options:host
+        -o:a --options:all
+        -s --settings
+        -s:b --settings:build
+        -s:h --settings:host
+        -s:a --settings:all
+        -c --conf
+        -c:b --conf:build
+        -c:h --conf:host
+        -c:a --conf:all
+        --lockfile-out --lockfile-overrides
+        -g --generator
+        -of --output-folder
+        -d --deployer
         --deployer-folder
     )
     unset(_args)
@@ -668,6 +702,50 @@ function(conan_install CONANFILE)
 endfunction()
 
 
+# add_link_options
+# ----------------
+#
+# .. versionadded:: 3.13
+# 
+# Add options to the link step for executable, shared library or module
+# library targets in the current directory and below that are added after
+# this command is invoked.
+#
+# .. code-block:: cmake
+#
+#   add_link_options(<option> ...)
+#
+# This command can be used to add any link options, but alternative commands
+# exist to add libraries (:command:`target_link_libraries` or
+# :command:`link_libraries`).  See documentation of the
+# :prop_dir:`directory <LINK_OPTIONS>` and
+# :prop_tgt:`target <LINK_OPTIONS>` ``LINK_OPTIONS`` properties.
+
+.. note::
+
+  This command cannot be used to add options for static library targets,
+  since they do not use a linker.  To add archiver or MSVC librarian flags,
+  see the :prop_tgt:`STATIC_LIBRARY_OPTIONS` target property.
+
+.. |command_name| replace:: ``add_link_options``
+.. include:: GENEX_NOTE.txt
+
+.. include:: DEVICE_LINK_OPTIONS.txt
+
+.. include:: OPTIONS_SHELL.txt
+
+.. include:: LINK_OPTIONS_LINKER.txt
+
+See Also
+^^^^^^^^
+
+* :command:`link_libraries`
+* :command:`target_link_libraries`
+* :command:`target_link_options`
+
+* :variable:`CMAKE_<LANG>_FLAGS` and :variable:`CMAKE_<LANG>_FLAGS_<CONFIG>`
+  add language-wide flags passed to all invocations of the compiler.
+  This includes invocations that drive compiling and those that drive linking.  
 function(conan_get_version conan_command conan_current_version)
     execute_process(
         COMMAND ${conan_command} --version
@@ -721,6 +799,98 @@ macro(construct_profile_argument argument_variable profile_list)
     unset(_profile_list)
 endmacro()
 
+macro(conan_install)
+    set(_conan_provide_dependency_invoked FALSE)
+    get_property(_conan_provide_dependency_invoked GLOBAL PROPERTY CONAN_PROVIDE_DEPENDENCY_INVOKED)
+    if(_conan_provide_dependency_invoked)
+        unset(_conan_provide_dependency_invoked)
+        return();
+    endif()
+    unset(_conan_provide_dependency_invoked)
+    set_property(GLOBAL PROPERTY CONAN_PROVIDE_DEPENDENCY_INVOKED TRUE)
+    get_property(_conan_install_success GLOBAL PROPERTY CONAN_INSTALL_SUCCESS)
+    if(NOT _conan_install_success)
+        find_program(CONAN_COMMAND "conan" REQUIRED)
+        conan_get_version(${CONAN_COMMAND} CONAN_CURRENT_VERSION)
+        conan_version_check(MINIMUM ${CONAN_MINIMUM_VERSION} CURRENT ${CONAN_CURRENT_VERSION})
+        message(STATUS "CMake-Conan: first find_package() found. Installing dependencies with Conan")
+    else()
+        message(STATUS "CMake-Conan: find_package(${ARGV1}) found, 'conan install' already ran")
+    endif()
+    unset(_conan_install_success)
+endmacro()
+
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+    cmake_language(
+        SET_DEPENDENCY_PROVIDER conan_provide_dependency
+        SUPPORTED_METHODS FIND_PACKAGE
+    )
+else()
+    if (COMMAND _find_package)
+        message(FATAL_ERROR "FIND_PACKAGE already redefined")
+    endif()
+    macro(find_package)
+        conan_provide_find_package(${ARGV})
+    endmacro()
+endif()
+
+macro(conan_provide_find_package package_name)
+    conan_install()
+    find_package(${package_name} ${ARGN})
+endmacro()
+
+# FIND_PROGRAM implementation
+if (COMMAND _find_program)
+    message(FATAL_ERROR "FIND_PROGRAM already redefined")
+endif()
+
+macro(find_program)
+    conan_provide_find_program(${ARGV})
+endmacro()
+
+macro(conan_provide_find_program VAR name)
+    foreach (_arg IN LISTS ARGN ITEMS)
+        if ("${_arg}" IN ITEMS HINTS NAMES_PER_DIR PATHS REGISTERY_VIEW PATH_SUFFIXES VALIDATOR DOC)
+            break()
+        endif()
+        if ("${_arg}" STREQUAL "conan")
+            _find_program("${VAR}" "${name}" ${ARGN})
+            return()
+        endif()
+    endforeach()
+    conan_install()
+    _find_program(${ARGN})
+endmacro()
+
+if (COMMAND _find_library)
+    message(FATAL_ERROR "FIND_LIBRARY already redefined")
+endif()
+
+macro(find_library)
+    conan_provide_find_library(${ARGV})
+    _find_library(${ARGN})
+endmacro()
+
+macro(conan_provide_find_library)
+    conan_install()
+    _find_program(${ARGN})
+endmacro()
+
+macro(conan_provide method)
+    if ("${method}" STREQUAL "FIND_PACKAGE")
+        conan_provide_find_package(${ARGN})
+    elseif ("${method}" STREQUAL "FIND_PROGRAM")
+        conan_provide_find_program(${ARGN})
+    elseif ("${method}" STREQUAL "FIND_LIBRARY")
+        conan_provide_find_library(${ARGN})
+    elseif ("${method}" STREQUAL "FIND_FILE")
+        conan_provide_find_file(${ARGN})
+    elseif ("${method}" STREQUAL "FIND_PATH")
+        conan_provide_find_path(${ARGN})
+    else()
+        message(FATAL_ERROR "Method `${method}` not implemented")
+    endif()
+endmacro()
 
 macro(conan_provide_dependency method package_name)
     set_property(GLOBAL PROPERTY CONAN_PROVIDE_DEPENDENCY_INVOKED TRUE)
@@ -837,18 +1007,6 @@ macro(conan_provide_dependency method package_name)
         list(REMOVE_ITEM CMAKE_MODULE_PATH "${_conan_generators_folder}")
     endif()
 endmacro()
-
-
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
-    cmake_language(
-        SET_DEPENDENCY_PROVIDER conan_provide_dependency
-        SUPPORTED_METHODS FIND_PACKAGE
-    )
-else()
-    macro(find_package)
-        conan_provide_dependency(FIND_PACKAGE ${ARGV})
-    endmacro()
-endif()
 
 
 macro(conan_provide_dependency_check)
