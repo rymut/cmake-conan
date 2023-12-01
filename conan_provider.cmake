@@ -40,23 +40,19 @@ Result Global properties
 
 Commands
 ^^^^^^^^
+#]=======================================================================]
 
+#[=======================================================================[.rst:
 detect_os
 ---------
 
-Add a target with no output so it will always be built.
+Detect os version
 
 .. code-block:: cmake
 
-  detect_os(Name 
-                <OS_VAR>
-                <OS_API_LEVEL>
-                <OS_SDK>
-                <OS_SUBSYSTEM>
-                <OS_VERSION>)
+  detect_os(<OS> <OS_API_LEVEL> <OS_SDK> <OS_SUBSYSTEM> <OS_VERSION>)
 
 #]=======================================================================]
-
 function(detect_os OS OS_API_LEVEL OS_SDK OS_SUBSYSTEM OS_VERSION)
     # it could be cross compilation
     message(STATUS "CMake-Conan: cmake_system_name=${CMAKE_SYSTEM_NAME}")
@@ -114,7 +110,30 @@ function(detect_os OS OS_API_LEVEL OS_SDK OS_SUBSYSTEM OS_VERSION)
     endif()
 endfunction()
 
+#[=======================================================================[.rst:
+detect_arch
+-----------
 
+Add a target with no output so it will always be built.
+
+.. code-block:: cmake
+
+  detect_arch(<ARCH>)
+
+
+Setting arch to list containing: armv8, armv7, arm7s, x86, x86_64.
+In most cases list will contain only single value.
+
+Detection uses cmake variables:
+``CMAKE_OSX_ARCHITECTURES``,
+``CMAKE_CXX_COMPILER_ARCHITECTURE_ID``,
+``CMAKE_SYSTEM_PROCESSOR``
+
+.. todo::
+
+  Check if `project(name LANGUAGES C)` will produce variable CMAKE_CXX_COMPILER_ARCHITECTURE_ID for MSVC
+
+#]=======================================================================]
 function(detect_arch ARCH)
     # CMAKE_OSX_ARCHITECTURES can contain multiple architectures, but Conan only supports one.
     # Therefore this code only finds one. If the recipes support multiple architectures, the
@@ -149,6 +168,18 @@ function(detect_arch ARCH)
 endfunction()
 
 
+#[=======================================================================[.rst:
+detect_cxx_standard
+-------------------
+
+Detect CXX standard used.
+
+.. code-block:: cmake
+
+  detect_cxx_standard(<CXX_STANDARD>)
+
+Set standard to `CMAKE_CXX_STANDARD` or `gnu${CMAKE_CXX_EXTENSIONS}`
+#]=======================================================================]
 function(detect_cxx_standard CXX_STANDARD)
     set(${CXX_STANDARD} ${CMAKE_CXX_STANDARD} PARENT_SCOPE)
     if(CMAKE_CXX_EXTENSIONS)
@@ -157,6 +188,24 @@ function(detect_cxx_standard CXX_STANDARD)
 endfunction()
 
 
+#[=======================================================================[.rst:
+detect_gnu_libstdcxx
+-------------------
+
+Detect GNU lib stdcxx
+
+.. code-block:: cmake
+
+  detect_gnu_libstdcxx()
+
+Result variables
+
+``_CONAN_IS_GNU_LIBSTDCXX``
+  TRUE if GNU libstdc++ is used, FALSE otherwise
+
+``_CONAN_GNU_LIBSTDCXX_SUFFIX``
+  "11" if `sizeof(std::string) != sizeof(void*)`, "" otherwise
+#]=======================================================================]
 macro(detect_gnu_libstdcxx)
     # _CONAN_IS_GNU_LIBSTDCXX true if GNU libstdc++
     check_cxx_source_compiles("
@@ -180,6 +229,21 @@ macro(detect_gnu_libstdcxx)
 endmacro()
 
 
+#[=======================================================================[.rst:
+detect_libcxx
+-------------
+
+Detect libcxx
+
+.. code-block:: cmake
+
+  detect_libcxx()
+
+Result variables
+
+``_CONAN_IS_LIBCXX``
+  True if LLVM libc++, Undefined otherwise
+#]=======================================================================]
 macro(detect_libcxx)
     # _CONAN_IS_LIBCXX true if LLVM libc++
     check_cxx_source_compiles("
@@ -190,7 +254,17 @@ macro(detect_libcxx)
     int main(){}" _CONAN_IS_LIBCXX)
 endmacro()
 
+#[=======================================================================[.rst:
+detect_lib_cxx
+--------------
 
+Detect cxx library
+
+.. code-block:: cmake
+
+  detect_lib_cxx(<LIB_CXX>)
+
+#]=======================================================================]
 function(detect_lib_cxx LIB_CXX)
     if(CMAKE_SYSTEM_NAME STREQUAL "Android")
         message(STATUS "CMake-Conan: android_stl=${CMAKE_ANDROID_STL_TYPE}")
@@ -230,7 +304,18 @@ function(detect_lib_cxx LIB_CXX)
     endif()
 endfunction()
 
+#[=======================================================================[.rst:
+detect_compiler
+---------------
 
+Detect compiler
+
+.. code-block:: cmake
+
+  detect_compiler(<COMPILER> <COMPILER_VERSION>
+                    <COMPILER_RUNTIME> <COMPILER_RUNTIME_TYPE>)
+
+#]=======================================================================]
 function(detect_compiler COMPILER COMPILER_VERSION COMPILER_RUNTIME COMPILER_RUNTIME_TYPE)
     if(DEFINED CMAKE_CXX_COMPILER_ID)
         set(_COMPILER ${CMAKE_CXX_COMPILER_ID})
@@ -311,7 +396,17 @@ function(detect_compiler COMPILER COMPILER_VERSION COMPILER_RUNTIME COMPILER_RUN
     set(${COMPILER_RUNTIME_TYPE} ${_COMPILER_RUNTIME_TYPE} PARENT_SCOPE)
 endfunction()
 
+#[=======================================================================[.rst:
+detect_build_type
+-----------------
 
+Detect build type
+
+.. code-block:: cmake
+
+  detect_build_type(<BUILD_TYPE>)
+
+#]=======================================================================]
 function(detect_build_type BUILD_TYPE)
     get_property(_MULTICONFIG_GENERATOR GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
     if(NOT _MULTICONFIG_GENERATOR)
@@ -321,6 +416,16 @@ function(detect_build_type BUILD_TYPE)
     endif()
 endfunction()
 
+#[=======================================================================[.rst:
+set_conan_compiler_if_appleclang
+--------------------------------
+
+
+.. code-block:: cmake
+
+  set_conan_compiler_if_appleclang(<lang> <command> <VAR>)
+
+#]=======================================================================]
 macro(set_conan_compiler_if_appleclang lang command output_variable)
     if(CMAKE_${lang}_COMPILER_ID STREQUAL "AppleClang")
         execute_process(COMMAND xcrun --find ${command}
@@ -332,7 +437,16 @@ macro(set_conan_compiler_if_appleclang lang command output_variable)
     endif()
 endmacro()
 
+#[=======================================================================[.rst:
+append_compiler_executables_configuration
+-----------------------------------------
 
+
+.. code-block:: cmake
+
+  append_compiler_executables_configuration()
+
+#]=======================================================================]
 macro(append_compiler_executables_configuration)
     set(_conan_c_compiler "")
     set(_conan_cpp_compiler "")
@@ -359,6 +473,16 @@ macro(append_compiler_executables_configuration)
 endmacro()
 
 
+#[=======================================================================[.rst:
+detect_host_profile
+-------------------
+
+
+.. code-block:: cmake
+
+  detect_host_profile(<output_file>)
+
+#]=======================================================================]
 function(detect_host_profile output_file)
     detect_os(MYOS MYOS_API_LEVEL MYOS_SDK MYOS_SUBSYSTEM MYOS_VERSION)
     detect_arch(MYARCH)
@@ -431,6 +555,16 @@ function(detect_host_profile output_file)
 endfunction()
 
 
+#[=======================================================================[.rst:
+conan_profile_detect_default
+-------------------
+
+
+.. code-block:: cmake
+
+  conan_profile_detect_default()
+
+#]=======================================================================]
 function(conan_profile_detect_default)
     message(STATUS "CMake-Conan: Checking if a default profile exists")
     execute_process(COMMAND ${CONAN_COMMAND} profile path default
@@ -452,6 +586,17 @@ function(conan_profile_detect_default)
     endif()
 endfunction()
 
+
+#[=======================================================================[.rst:
+conan_install_format_arguments
+------------------------------
+
+
+.. code-block:: cmake
+
+  conan_install_format_arguments(<VAR> [...])
+
+#]=======================================================================]
 function(conan_install_format_arguments ARGUMENTS)
     
     set(_conan_values
@@ -605,6 +750,17 @@ function(conan_install_format_arguments ARGUMENTS)
     set(${ARGUMENTS} "${_args}" PARENT_SCOPE)
 endfunction()
 
+
+#[=======================================================================[.rst:
+conan_install_arguments_unset
+-----------------------------
+
+
+.. code-block:: cmake
+
+  conan_install_arguments_unset(<VAR> [...])
+
+#]=======================================================================]
 function(conan_install_arguments_unset PREFIX)
     set(_conan_options NO_REMOTE UPDATE LOCKFILE_PARTIAL LOCKFILE_PACKAGES LOCKFILE_CLEAN BUILD_REQUIRE HELP)
     set(_conan_one_values VERBOSE FORMAT NAME VERSION USER CHANNEL PROFILE PROFILE_BUILD PROFILE_HOST PROFILE_ALL LOCKFILE LOCKFILE_OUT DEPLOYER DEPLOYER_FOLDER OUTPUT_FOLDER)
@@ -614,6 +770,17 @@ function(conan_install_arguments_unset PREFIX)
     endforeach()
 endfunction()
 
+
+#[=======================================================================[.rst:
+conan_install_parse_arguments
+-----------------------------
+
+
+.. code-block:: cmake
+
+  conan_install_parse_arguments(<PREFIX> [...])
+
+#]=======================================================================]
 function(conan_install_parse_arguments PREFIX)
     set(_conan_options NO_REMOTE UPDATE LOCKFILE_PARTIAL LOCKFILE_PACKAGES LOCKFILE_CLEAN BUILD_REQUIRE HELP)
     set(_conan_one_values VERBOSE FORMAT NAME VERSION USER CHANNEL PROFILE PROFILE_BUILD PROFILE_HOST PROFILE_ALL LOCKFILE LOCKFILE_OUT DEPLOYER DEPLOYER_FOLDER OUTPUT_FOLDER)
@@ -674,6 +841,17 @@ function(conan_install_parse_arguments PREFIX)
     endforeach()
 endfunction()
 
+
+#[=======================================================================[.rst:
+conan_install
+-------------
+
+
+.. code-block:: cmake
+
+  conan_install(<CONANFILE> [...])
+
+#]=======================================================================]
 function(conan_install CONANFILE)
     message(STATUS "CMake-Conan: conan install ${ARGN}")
     execute_process(COMMAND ${CONAN_COMMAND} install ${ARGN}
@@ -702,50 +880,16 @@ function(conan_install CONANFILE)
 endfunction()
 
 
-# add_link_options
-# ----------------
-#
-# .. versionadded:: 3.13
-# 
-# Add options to the link step for executable, shared library or module
-# library targets in the current directory and below that are added after
-# this command is invoked.
-#
-# .. code-block:: cmake
-#
-#   add_link_options(<option> ...)
-#
-# This command can be used to add any link options, but alternative commands
-# exist to add libraries (:command:`target_link_libraries` or
-# :command:`link_libraries`).  See documentation of the
-# :prop_dir:`directory <LINK_OPTIONS>` and
-# :prop_tgt:`target <LINK_OPTIONS>` ``LINK_OPTIONS`` properties.
+#[=======================================================================[.rst:
+conan_get_version
+-----------------
 
-.. note::
 
-  This command cannot be used to add options for static library targets,
-  since they do not use a linker.  To add archiver or MSVC librarian flags,
-  see the :prop_tgt:`STATIC_LIBRARY_OPTIONS` target property.
+.. code-block:: cmake
 
-.. |command_name| replace:: ``add_link_options``
-.. include:: GENEX_NOTE.txt
+  conan_get_version(<conan_command> <conan_current_version>)
 
-.. include:: DEVICE_LINK_OPTIONS.txt
-
-.. include:: OPTIONS_SHELL.txt
-
-.. include:: LINK_OPTIONS_LINKER.txt
-
-See Also
-^^^^^^^^
-
-* :command:`link_libraries`
-* :command:`target_link_libraries`
-* :command:`target_link_options`
-
-* :variable:`CMAKE_<LANG>_FLAGS` and :variable:`CMAKE_<LANG>_FLAGS_<CONFIG>`
-  add language-wide flags passed to all invocations of the compiler.
-  This includes invocations that drive compiling and those that drive linking.  
+#]=======================================================================]
 function(conan_get_version conan_command conan_current_version)
     execute_process(
         COMMAND ${conan_command} --version
@@ -761,7 +905,16 @@ function(conan_get_version conan_command conan_current_version)
     set(${conan_current_version} ${conan_version} PARENT_SCOPE)
 endfunction()
 
+#[=======================================================================[.rst:
+conan_version_check
+-----------------
 
+
+.. code-block:: cmake
+
+  conan_version_check()
+
+#]=======================================================================]
 function(conan_version_check)
     set(options )
     set(oneValueArgs MINIMUM CURRENT)
@@ -781,7 +934,16 @@ function(conan_version_check)
     endif()
 endfunction()
 
+#[=======================================================================[.rst:
+construct_profile_argument
+--------------------------
 
+
+.. code-block:: cmake
+
+  construct_profile_argument(<argument_variable> <profile_list>)
+
+#]=======================================================================]
 macro(construct_profile_argument argument_variable profile_list)
     set(${argument_variable} "")
     if("${profile_list}" STREQUAL "CONAN_HOST_PROFILE")
@@ -799,6 +961,16 @@ macro(construct_profile_argument argument_variable profile_list)
     unset(_profile_list)
 endmacro()
 
+#[=======================================================================[.rst:
+conan_install
+-------------
+
+
+.. code-block:: cmake
+
+  conan_install()
+
+#]=======================================================================]
 macro(conan_install)
     set(_conan_provide_dependency_invoked FALSE)
     get_property(_conan_provide_dependency_invoked GLOBAL PROPERTY CONAN_PROVIDE_DEPENDENCY_INVOKED)
